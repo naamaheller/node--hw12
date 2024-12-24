@@ -1,0 +1,255 @@
+שיעורי בית שיעור 12
+יש פה רק דפים שיש בהם שינוי
+
+import { courseModel } from "../models/course.js"
+
+export const getAllCourse = async (req, res) => {
+    try {
+        let data = await courseModel.find();
+        res.json(data);
+    } catch (err) {
+        console.log(err);
+        res.status(400).json({ title: "cannot get all", message: err.message });
+    }
+};
+
+export const getById = async (req, res) => {
+    let { id } = req.params;
+    try {
+        let data = await courseModel.findById(id);
+        if (!data) return res.status(404).json({ title: "cannot find by id", message: "book with such id not found" });
+        res.json(data);
+    } catch (err) {
+        console.log(err);
+        res.status(400).json({ title: "cannot get by id", message: err.message });
+    }
+};
+
+export const update = async (req, res) => {
+    let { id } = req.params;
+    let body = req.body;
+    try {
+        let data = await courseModel.findByIdAndUpdate(id, body, { new: true });
+        if (!data) return res.status(404).json({ title: "cannot update by id", message: "book with such id not found" });
+        res.json(data);
+    } catch (err) {
+        console.log(err)
+        res.status(400).json({ title: "cannot update", message: err.message });
+    }
+}
+
+
+export const deleteById = async (req, res) => {
+    let { id } = req.params;
+    try {
+        let data = await courseModel.findByIdAndDelete(id);
+        if (!data)
+            return res.status(404).json({ title: "cannot delete by id", message: "book with such id not found" });
+        res.json(data);
+    } catch (err) {
+        console.log(err);
+        res.status(400).json({ title: "cannot delete", message: err.message });
+    }
+};
+
+export const add = async (req, res) => {
+    let { body } = req;
+    if (!body.name )
+        return res.status(400).json({ title: "cannot add", message: "missing parameters name or numPages" });
+
+    try {
+        let newCourse = new courseModel(body);
+        let data = await newCourse.save();
+        res.json(data);
+    } catch (err) {
+        console.log(err);
+        res.status(400).json({ title: "cannot add", message: err.message });
+    }
+};
+
+
+import { cstudentModel } from "../models/cstudent.js";
+import { userModel } from "../models/user.js";
+
+// 1. פונקציה להחזרת כל ההשאלות
+export const getAllCstudent = async (req, res) => {
+  try {
+    let result = await cstudentModel.find();
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ title: "cannot get all cstudents", message: err.message });
+  }
+};
+
+// 2. פונקציה להחזרת השאלה לפי מזהה (ID)
+export const getCstudentById = async (req, res) => {
+  try {
+    const result = await cstudentModel.findById(req.params.id);
+    if (!result) {
+      return res.status(404).json({ title: "cannot find by id", message: "ID not found" });
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ title: "cannot get by id", message: err.message });
+  }
+};
+
+// 3. פונקציה להחזרת כל ההשאלות לפי מזהה משתמש
+export const getCstudentByUserId = async (req, res) => {
+  try {
+    const result = await cstudentModel.find({ userId: req.params.userId });
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ title: "cannot get all by user id", message: err.message });
+  }
+};
+
+// 4. פונקציה להחזרת השאלה
+export const returnCstudent = async (req, res) => {
+  try {
+    const result = await cstudentModel.findByIdAndUpdate(req.params.id, {
+      $set: { returnDate: new Date() },
+    }, { new: true });
+
+    if (!result) {
+      return res.status(404).json({ title: "cannot update by id", message: "ID not found or invalid" });
+    }
+
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ title: "cannot update", message: err.message });
+  }
+};
+
+// 5. פונקציה לעדכון נתונים נוספים לפי מזהה
+export const updateCstudentById = async (req, res) => {
+  try {
+    const result = await cstudentModel.findByIdAndUpdate(req.params.id, req.body, { new: true });
+    if (!result) {
+      return res.status(404).json({ title: "cannot update by id", message: "ID not found" });
+    }
+    res.json(result);
+  } catch (err) {
+    res.status(400).json({ title: "cannot update by id", message: err.message });
+  }
+};
+
+export const addCstudent = async (req, res) => {
+    let {body}=req;
+    if(!body.userId||!body.books||!body.books.length)
+        return res.status(404).json({title:"connot add cstudent",message:"missing details:userId/courses"})
+    try {
+      let user = await userModel.findById(body.userId);
+      if (!user) {
+        return res.status(404).json({ title: "no such user", message: "" });
+      }
+      if(user.fine>0)
+        return res.status(403).json({ title: "this user need to pay fine", message: "cannot take cstudent" })
+    let newCstudent=new cstudentModel(body);
+    await newCstudent.save();
+      res.json(newCstudent);
+    } catch (err) {
+      res.status(400).json({ title: "cannot update by id", message: err.message });
+    }
+  };
+
+
+import { Model, Schema, model } from "mongoose";
+
+const authorSchema = Schema({
+  firstName: String,
+  lastName: String,
+  address: String,
+});
+
+const courseSchema = Schema({
+  name: String,
+  subject: [String],
+  price: Number,
+  dateOpen: Date,
+  author: authorSchema,
+});
+
+// ייצוא של הסכמה והמודל
+export const courseModel = model("course", courseSchema);
+export { courseSchema };
+
+
+
+import { Schema,model,Types } from "mongoose";
+import {courseSchema} from "./course.js"
+
+
+const cstudentSchema=Schema({
+    date:{type:Date,default:new Date()},
+    endDate:{type:Date,default:()=>{
+        let d=new Date()
+        return d.setDate(d.getDate()+7)
+    }},
+    userId:{
+        type:Types.ObjectId,
+        ref:"users"
+    },
+    courses:[courseSchema],
+    isEnd:{type:Boolean,default:false}
+})
+export const cstudentModel=model("cstudent",cstudentSchema);
+
+
+import { Router } from "express";
+import {
+    addCstudent,
+    getAllCstudent,
+    getCstudentById,
+    getCstudentByUserId,
+    returnCstudent,
+    updateCstudentById,
+  } from "../controllers/cstudent.js";
+  
+const router=Router();
+router.get("/",getAllCstudent)
+router.get("/:id",getCstudentById)
+router.get("/ByUserId/:userid",getCstudentByUserId)
+router.put("/:id",returnCstudent)
+router.put("/putenddate/:id",updateCstudentById)
+router.post("/",addCstudent)
+
+export default router;
+
+
+
+
+import express from "express";
+import courseRouter from "./routers/course.js";
+import userRouter from "./routers/user.js";
+import cstudentRouter from "./routers/cstudent.js"
+import { connectToDb } from "./config/db.js";
+import dotenv from "dotenv";
+import fs from "fs/promises";
+
+
+function PrintToLog(req, res, next) {
+    try {
+        fs.appendFile("./log.txt", `${new Date().toLocaleDateString()} ${req.method} ${req.url}\n`);
+        next();
+    } catch (err) {
+        return res.status(400).json({ title: "error in printToLog", message: err.message });
+    }
+}
+
+dotenv.config();
+const app = express();
+connectToDb();
+app.use(PrintToLog);
+
+app.use(express.json());
+
+app.use("/api/course", courseRouter);
+app.use("/api/user", userRouter);
+app.use("/api/cstudent",cstudentRouter)
+let port=process.env.PORT;
+
+app.listen(port,"localhost",()=>{
+    console.log("app is listening on port "+port)
+})
+
